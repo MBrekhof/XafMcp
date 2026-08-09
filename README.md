@@ -4,6 +4,12 @@ A DevExpress XAF Blazor Server application (Customers/Orders/Products/Projects/T
 that embeds a Streamable-HTTP MCP endpoint in the same process, so an LLM client (Claude Code)
 can interrogate the living application. Design: `docs/superpowers/specs/2026-08-09-xafmcp-design.md`.
 
+## Architecture
+
+![XafMcp architecture](docs/architecture.svg)
+
+Editable source: `docs/architecture.excalidraw`.
+
 ## Run
 
     dotnet run --project XafMcp.Blazor.Server -- --updateDatabase --forceUpdate --silent   # first time: create + seed DB
