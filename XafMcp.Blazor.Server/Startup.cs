@@ -65,6 +65,7 @@ public class Startup {
         authentication.AddCookie(options => {
             options.LoginPath = "/LoginPage";
         });
+        services.AddScoped<Mcp.McpSecurityContext>();
         services.AddMcpServer()
             .WithHttpTransport()
             .WithTools<Mcp.ServerInfoTools>()
