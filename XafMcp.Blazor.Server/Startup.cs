@@ -67,7 +67,8 @@ public class Startup {
         });
         services.AddMcpServer()
             .WithHttpTransport()
-            .WithTools<Mcp.ServerInfoTools>();
+            .WithTools<Mcp.ServerInfoTools>()
+            .WithTools<Mcp.DataTools>();
     }
 
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env) {
