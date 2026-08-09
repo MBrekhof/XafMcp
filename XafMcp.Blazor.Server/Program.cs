@@ -58,7 +58,7 @@ namespace XafMcp.Blazor.Server
                         .MinimumLevel.Override("Microsoft.Hosting.Lifetime", Serilog.Events.LogEventLevel.Information)
                         .Enrich.FromLogContext()
                         .WriteTo.Console()
-                        .WriteTo.File(new CompactJsonFormatter(), "logs/xafmcp-.clef.json",
+                        .WriteTo.File(new CompactJsonFormatter(), "logs/xafmcp-.clef",
                             rollingInterval: RollingInterval.Day,
                             retainedFileCountLimit: 14,
                             shared: true);
