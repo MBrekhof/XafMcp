@@ -2250,7 +2250,10 @@ public sealed class SchemaTools(IConfiguration configuration) {
 
     static List<ColumnInfo> ReadModelColumns(string connectionString) {
         // Schema work is deliberately outside XAF/security: a plain DbContext over the same model.
-        var options = new DbContextOptionsBuilder<XafMcpEFCoreDbContext>().UseSqlServer(connectionString).Options;
+        var options = new DbContextOptionsBuilder<XafMcpEFCoreDbContext>()
+            .UseSqlServer(connectionString)
+            .UseChangeTrackingProxies() // Task 11 finding: notification strategy fails model validation without proxies (see ModelSmokeTests)
+            .Options;
         using var ctx = new XafMcpEFCoreDbContext(options);
         var result = new List<ColumnInfo>();
         foreach (var table in ctx.Model.GetRelationalModel().Tables) {
