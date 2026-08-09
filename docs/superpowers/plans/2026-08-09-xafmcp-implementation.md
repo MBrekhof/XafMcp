@@ -1832,7 +1832,8 @@ public sealed class PathValueResolverTests {
 
     [TestMethod]
     public void Unknown_segment_throws_with_path_context() {
-        var o = new Owner();
+        // Home must be non-null: null-propagation short-circuits before segment validation (Task 9 finding)
+        var o = new Owner { Home = new Home() };
         var ex = Assert.ThrowsExactly<ArgumentException>(() => PathValueResolver.GetValue(o, "Home.Street"));
         Assert.IsTrue(ex.Message.Contains("Street"));
     }

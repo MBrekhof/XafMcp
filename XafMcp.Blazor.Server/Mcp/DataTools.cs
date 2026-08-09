@@ -74,6 +74,68 @@ public sealed class DataTools(McpSecurityContext securityContext) {
         return System.Text.Json.JsonSerializer.Serialize(new { entity = ti.Type.Name, returned = rows.Count, rows }, JsonOpts.Indented);
     }
 
+    [McpServerTool(Name = "aggregate_entities")]
+    [Description("Group-and-aggregate one entity. group_by accepts property paths like 'Customer.Region.Name' or 'Status'. function: count | sum | avg | min | max (sum/avg/min/max need measure). Optional XAF criteria pre-filters rows.")]
+    public string AggregateEntities(
+        [Description("Entity name from list_entities")] string entity,
+        [Description("Group-by property path, e.g. 'Customer.Region.Name'")] string group_by,
+        [Description("count | sum | avg | min | max")] string function = "count",
+        [Description("Numeric property path to measure (required for sum/avg/min/max)")] string? measure = null,
+        [Description("XAF criteria string to pre-filter rows")] string? criteria = null) {
+        var ti = EntityRegistry.Resolve(entity);
+        function = function.ToLowerInvariant();
+        if (function is not ("count" or "sum" or "avg" or "min" or "max")) {
+            throw new ModelContextProtocol.McpException("function must be one of: count, sum, avg, min, max");
+        }
+        if (function != "count" && string.IsNullOrWhiteSpace(measure)) {
+            throw new ModelContextProtocol.McpException($"function '{function}' requires a measure property");
+        }
+        DevExpress.Data.Filtering.CriteriaOperator? crit = null;
+        if (!string.IsNullOrWhiteSpace(criteria)) {
+            try { crit = DevExpress.Data.Filtering.CriteriaOperator.Parse(criteria); }
+            catch (Exception ex) { throw new ModelContextProtocol.McpException($"Invalid criteria: {ex.Message}"); }
+        }
+        using var os = securityContext.CreateObjectSpace(ti.Type);
+        GuardPathAgainstDeniedMembers(os, ti, group_by);
+        if (measure != null) GuardPathAgainstDeniedMembers(os, ti, measure);
+
+        var list = ((DevExpress.ExpressApp.EFCore.EFCoreObjectSpace)os).GetObjects(ti.Type, crit, new List<DevExpress.Xpo.SortProperty>(), false);
+        // ponytail: in-memory grouping — correct and simple at POC scale; move to a LINQ GroupBy over
+        // GetObjectsQuery<T> if row counts grow past a few thousand
+        var groups = list.Cast<object>()
+            .GroupBy(o => XafMcp.Module.Services.PathValueResolver.GetValue(o, group_by)?.ToString() ?? "(null)")
+            .Select(g => new {
+                group = g.Key,
+                count = g.Count(),
+                value = function switch {
+                    "count" => (decimal?)g.Count(),
+                    "sum" => g.Sum(o => ToDecimal(XafMcp.Module.Services.PathValueResolver.GetValue(o, measure!))),
+                    "avg" => g.Average(o => ToDecimal(XafMcp.Module.Services.PathValueResolver.GetValue(o, measure!))),
+                    "min" => g.Min(o => ToDecimal(XafMcp.Module.Services.PathValueResolver.GetValue(o, measure!))),
+                    _ => g.Max(o => ToDecimal(XafMcp.Module.Services.PathValueResolver.GetValue(o, measure!))),
+                },
+            })
+            .OrderByDescending(g => g.value)
+            .Take(500)
+            .ToList();
+        return JsonSerializer.Serialize(new { entity = ti.Type.Name, group_by, function, measure, groups }, JsonOpts.Indented);
+    }
+
+    static decimal ToDecimal(object? value) => value is null ? 0m : Convert.ToDecimal(value);
+
+    void GuardPathAgainstDeniedMembers(DevExpress.ExpressApp.IObjectSpace os, ITypeInfo rootTi, string path) {
+        // Walk the ITypeInfo chain alongside the path; refuse any segment the MCP role can't read.
+        var currentTi = rootTi;
+        foreach (var segment in path.Split('.')) {
+            if (currentTi == null) break;
+            var denied = PermissionInspector.GetDeniedReadMembers(os, McpSecurityContext.RoleName, currentTi.Type);
+            if (denied.Contains(segment)) {
+                throw new ModelContextProtocol.McpException($"Access to '{currentTi.Type.Name}.{segment}' is denied for the MCP role.");
+            }
+            currentTi = currentTi.FindMember(segment)?.MemberTypeInfo;
+        }
+    }
+
     static string SimpleTypeName(Type t) {
         t = Nullable.GetUnderlyingType(t) ?? t;
         if (t.IsGenericType) return t.Name; // collections keep their generic name
