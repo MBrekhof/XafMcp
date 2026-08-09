@@ -2,6 +2,10 @@
 
 **Date:** 2026-08-09 · **Status:** Approved design, pre-implementation · **Type:** Private POC
 
+> **Supersedes** the earlier XafMCP design (stdio companion app for XafMaui, DX 25.2, shared DB) —
+> now in `docs/archive/`. Two of its tools (`list_roles`, `explain_permissions`) were adopted into
+> this design; its `implementation-notes.md` remains useful implementation reference.
+
 ## Goal
 
 Prove that an XAF-based LOB application can expose itself as an MCP server — metadata, secured data
@@ -83,7 +87,7 @@ pattern, initialized collections, explicit decimal precision, aggregated child c
 growing quarter-over-quarter in another) so "opportunity by region" reports find real signal, not
 uniform noise. Seeding is idempotent (skip when data exists).
 
-## MCP tool surface (8 tools, all read-only)
+## MCP tool surface (10 tools, all read-only)
 
 Registered via `ModelContextProtocol.AspNetCore` attribute-based tool classes; DI gives them
 `ITypesInfo`, an object-space factory, and config. Every tool that touches data opens a
@@ -100,6 +104,17 @@ Registered via `ModelContextProtocol.AspNetCore` attribute-based tool classes; D
 
 Criteria strings parse via `CriteriaOperator.Parse`. `describe_entity` output is the LLM's contract
 for writing criteria — property names it returns are exactly what `query`/`aggregate` accept.
+
+### Security insight (adopted from the archived design)
+
+| Tool | Input | Output |
+|---|---|---|
+| `list_roles` | — | Roles: name, administrative flag, user count, per-type permission summary (e.g. `Customer:R`, `Person:R minus HourlyRate`) |
+| `explain_permissions` | `role?` (default `McpAgent`), `entity?` | Type-, object-, and member-level permission breakdown from `PermissionPolicyRole` traversal (TypePermissions → ObjectPermissions/MemberPermissions) |
+
+Both read the security model through the secured object space; they answer "what can the MCP agent
+(or any role) actually see and why" — including surfacing the `Person.HourlyRate` member-deny
+explicitly.
 
 ### Schema
 
@@ -161,7 +176,9 @@ Serilog writes compact JSON (CLEF) rolling daily files to `logs/xafmcp-YYYYMMDD.
   2. "Project status report" → per-project rollup incl. task states and overdue items.
   3. "Any errors in the app last week?" → summarize/search logs.
   4. "Is the database in sync with the model?" → drift findings after `drift-demo.sql` applied.
-  5. HourlyRate never appears in any output.
+  5. "What is the MCP agent allowed to do?" → `explain_permissions` names the read-only type grants
+     and the `Person.HourlyRate` member-deny.
+  6. HourlyRate never appears in any output.
 
 ## Out of scope (deliberate)
 
