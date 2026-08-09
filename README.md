@@ -10,6 +10,8 @@ can interrogate the living application. Design: `docs/superpowers/specs/2026-08-
 
 Editable source: `docs/architecture.excalidraw`.
 
+Want this in your own XAF app? Step-by-step guide with all the gotchas: `docs/how-to-implement.md`.
+
 ## Run
 
     dotnet run --project XafMcp.Blazor.Server -- --updateDatabase --forceUpdate --silent   # first time: create + seed DB
