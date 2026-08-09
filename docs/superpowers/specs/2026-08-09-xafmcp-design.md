@@ -128,7 +128,7 @@ so the demo produces findings. README documents apply via `sqlcmd`.
 
 ### Logs (Serilog CLEF files)
 
-Serilog writes compact JSON (CLEF) rolling daily files to `logs/xafmcp-YYYYMMDD.clef.json`,
+Serilog writes compact JSON (CLEF) rolling daily files to `logs/xafmcp-YYYYMMDD.clef`,
 14-day retention, `shared: true`.
 
 | Tool | Input | Output |

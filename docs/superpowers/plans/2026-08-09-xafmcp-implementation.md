@@ -1245,7 +1245,7 @@ git commit -m "feat: security seed (Admin, McpAgent/McpReadOnly with HourlyRate 
 
 **Interfaces:**
 - Consumes: nothing new
-- Produces: CLEF files at `XafMcp.Blazor.Server/logs/xafmcp-YYYYMMDD.clef.json` — Task 12's `LogTools` resolves this directory as `Path.Combine(env.ContentRootPath, "logs")`
+- Produces: CLEF files at `XafMcp.Blazor.Server/logs/xafmcp-YYYYMMDD.clef` — Task 12's `LogTools` resolves this directory as `Path.Combine(env.ContentRootPath, "logs")` and globs `xafmcp-*.clef`
 
 - [ ] **Step 1: Packages**
 
@@ -1269,10 +1269,14 @@ In `Program.cs`, add `using Serilog;` and `using Serilog.Formatting.Compact;`, a
         .MinimumLevel.Override("Microsoft.Hosting.Lifetime", Serilog.Events.LogEventLevel.Information)
         .Enrich.FromLogContext()
         .WriteTo.Console()
-        .WriteTo.File(new CompactJsonFormatter(), "logs/xafmcp-.clef.json",
+        .WriteTo.File(new CompactJsonFormatter(), "logs/xafmcp-.clef",
             rollingInterval: RollingInterval.Day,
             retainedFileCountLimit: 14,
             shared: true);
+        // NOTE: Serilog inserts the rolling date before the LAST extension, so the
+        // template "xafmcp-.clef" yields files named xafmcp-20260809.clef. A
+        // ".clef.json" template would yield "xafmcp-.clef20260809.json" and break
+        // the Task 12 glob.
 })
 ```
 
@@ -1282,7 +1286,7 @@ In `Program.cs`, add `using Serilog;` and `using Serilog.Formatting.Compact;`, a
 ./scripts/stop-app.ps1; dotnet build XafMcp.sln
 ./scripts/run-app.ps1
 ./scripts/stop-app.ps1
-$log = Get-ChildItem XafMcp.Blazor.Server\logs\xafmcp-*.clef.json | Sort-Object Name | Select-Object -Last 1
+$log = Get-ChildItem XafMcp.Blazor.Server\logs\xafmcp-*.clef | Sort-Object Name | Select-Object -Last 1
 $first = Get-Content $log.FullName -TotalCount 1 | ConvertFrom-Json
 if (-not $first.'@t') { throw 'first log line is not CLEF' } else { Write-Host "CLEF OK: $($first.'@t')" }
 ```
@@ -2356,7 +2360,7 @@ git commit -m "feat: check_schema_drift with unit-tested comparer and drift demo
 - Modify: `XafMcp.Blazor.Server/Startup.cs` (`.WithTools<Mcp.LogTools>()`)
 
 **Interfaces:**
-- Consumes: CLEF files from Task 5 (`logs/xafmcp-*.clef.json` under ContentRootPath)
+- Consumes: CLEF files from Task 5 (`logs/xafmcp-*.clef` under ContentRootPath)
 - Produces: `ClefParser.ParseLine(string) : ClefEvent?` and `ClefParser.ParseFiles(IEnumerable<string>) : IEnumerable<ClefEvent>` with `ClefEvent(DateTimeOffset Timestamp, string Level, string Message, string? Exception, string? SourceContext)`
 
 - [ ] **Step 1: Failing parser tests**
@@ -2482,7 +2486,7 @@ public sealed class LogTools(IWebHostEnvironment environment) {
     IEnumerable<ClefEvent> Load(DateTime? from, DateTime? to) {
         var dir = Path.Combine(environment.ContentRootPath, "logs");
         if (!Directory.Exists(dir)) return [];
-        var files = Directory.GetFiles(dir, "xafmcp-*.clef.json");
+        var files = Directory.GetFiles(dir, "xafmcp-*.clef");
         var events = ClefParser.ParseFiles(files);
         if (from.HasValue) events = events.Where(e => e.Timestamp >= from.Value);
         if (to.HasValue) events = events.Where(e => e.Timestamp <= to.Value);
