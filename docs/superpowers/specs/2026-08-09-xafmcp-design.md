@@ -150,7 +150,12 @@ Serilog writes compact JSON (CLEF) rolling daily files to `logs/xafmcp-YYYYMMDD.
   on the login screen. Authenticated programmatically per request-scope, same pattern as the
   Hangfire `XafJobScopeInitializer` service-user approach.
 - **McpAgent role:** read permission on all module types; **member-deny read** on
-  `Person.HourlyRate`; **no write/create/delete permissions on anything**. Read-only is enforced by
+  `Person.HourlyRate`; **no write/create/delete permissions on anything**. Additionally,
+  read on the security-metadata types (`PermissionPolicyRole`, `PermissionPolicyTypePermissionObject`,
+  `PermissionPolicyMemberPermissionsObject`, `PermissionPolicyUser` with member-deny on
+  `StoredPassword`) — required because the member-deny projection and the security-insight
+  tools introspect the permission model *through the secured object space*; without the grant
+  the denied-member lookup silently returns empty (found during implementation, Task 8). Read-only is enforced by
   role, and additionally by construction (no tool calls `CommitChanges`).
 - Acceptance for the security demo: a query/aggregate touching `Person.HourlyRate` either omits the
   member or returns the protected-content marker — it never returns the value.
