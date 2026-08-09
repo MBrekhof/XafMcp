@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata;
 using XafMcp.Module.BusinessObjects;
 
 namespace XafMcp.Tests;
@@ -30,6 +29,7 @@ public sealed class ModelSmokeTests {
         var checks = new (string Table, string Column)[] {
             ("Persons", "HourlyRate"), ("Products", "UnitPrice"), ("Orders", "Total"),
             ("OrderLines", "UnitPrice"), ("OrderLines", "Discount"), ("Projects", "Budget"),
+            ("ProjectTasks", "EstimatedHours"), ("ProjectTasks", "ActualHours"),
         };
         foreach (var (table, column) in checks) {
             var col = relational.Tables.Single(t => t.Name == table).Columns.Single(c => c.Name == column);
