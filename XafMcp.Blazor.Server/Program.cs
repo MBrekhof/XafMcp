@@ -3,6 +3,8 @@ using DevExpress.ExpressApp.Blazor.DesignTime;
 using DevExpress.ExpressApp.Blazor.Services;
 using DevExpress.ExpressApp.Design;
 using DevExpress.ExpressApp.Utils;
+using Serilog;
+using Serilog.Formatting.Compact;
 using System.Reflection;
 
 namespace XafMcp.Blazor.Server
@@ -49,6 +51,18 @@ namespace XafMcp.Blazor.Server
         }
         public static IHostBuilder CreateHostBuilder(string[] args) =>
             Host.CreateDefaultBuilder(args)
+                .UseSerilog((context, configuration) => {
+                    configuration
+                        .MinimumLevel.Information()
+                        .MinimumLevel.Override("Microsoft", Serilog.Events.LogEventLevel.Warning)
+                        .MinimumLevel.Override("Microsoft.Hosting.Lifetime", Serilog.Events.LogEventLevel.Information)
+                        .Enrich.FromLogContext()
+                        .WriteTo.Console()
+                        .WriteTo.File(new CompactJsonFormatter(), "logs/xafmcp-.clef.json",
+                            rollingInterval: RollingInterval.Day,
+                            retainedFileCountLimit: 14,
+                            shared: true);
+                })
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     webBuilder.UseStartup<Startup>();
