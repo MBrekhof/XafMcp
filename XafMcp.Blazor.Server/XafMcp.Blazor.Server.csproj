@@ -18,6 +18,7 @@
     <PackageReference Include="DevExpress.ExpressApp.Blazor" Version="26.1.4" />
     <PackageReference Include="DevExpress.ExpressApp.CodeAnalysis" Version="26.1.4" />
     <PackageReference Include="DevExpress.ExpressApp.Validation.Blazor" Version="26.1.4" />
+    <PackageReference Include="ModelContextProtocol.AspNetCore" Version="2.1.0" />
     <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
     <PackageReference Include="Serilog.Formatting.Compact" Version="3.0.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />

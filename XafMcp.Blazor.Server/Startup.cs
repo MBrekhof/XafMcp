@@ -65,6 +65,9 @@ public class Startup {
         authentication.AddCookie(options => {
             options.LoginPath = "/LoginPage";
         });
+        services.AddMcpServer()
+            .WithHttpTransport()
+            .WithTools<Mcp.ServerInfoTools>();
     }
 
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env) {
@@ -87,6 +90,7 @@ public class Startup {
             endpoints.MapXafEndpoints();
             endpoints.MapBlazorHub();
             endpoints.MapFallbackToPage("/_Host");
+            endpoints.MapMcp("/mcp");
         });
     }
 }
