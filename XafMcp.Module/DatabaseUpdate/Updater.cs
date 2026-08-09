@@ -55,6 +55,14 @@ public class Updater : ModuleUpdater {
             mcpRole.SetTypePermission<ProjectTask>(SecurityOperations.Read, SecurityPermissionState.Allow);
             // The security demo: HourlyRate never reaches the MCP client.
             mcpRole.AddMemberPermission<Person>(SecurityOperations.Read, nameof(Person.HourlyRate), null, SecurityPermissionState.Deny);
+            // Security-metadata read: the member-deny projection and Task 10's security-insight tools
+            // introspect the permission model THROUGH the secured space; without these grants the
+            // role lookup silently returns empty (found in Task 8).
+            mcpRole.SetTypePermission<PermissionPolicyRole>(SecurityOperations.Read, SecurityPermissionState.Allow);
+            mcpRole.SetTypePermission<PermissionPolicyTypePermissionObject>(SecurityOperations.Read, SecurityPermissionState.Allow);
+            mcpRole.SetTypePermission<PermissionPolicyMemberPermissionsObject>(SecurityOperations.Read, SecurityPermissionState.Allow);
+            mcpRole.SetTypePermission<PermissionPolicyUser>(SecurityOperations.Read, SecurityPermissionState.Allow);
+            mcpRole.AddMemberPermission<PermissionPolicyUser>(SecurityOperations.Read, "StoredPassword", null, SecurityPermissionState.Deny); // defense in depth
         }
         var mcpUser = ObjectSpace.FirstOrDefault<PermissionPolicyUser>(u => u.UserName == McpUserName);
         if (mcpUser == null) {
