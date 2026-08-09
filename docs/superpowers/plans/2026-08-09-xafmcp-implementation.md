@@ -2607,6 +2607,9 @@ git commit -m "feat: search_logs + summarize_logs over Serilog CLEF files" -m "C
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
+    <Using Include="NUnit.Framework" /> <!-- Task 13 finding: attributes don't resolve without it -->
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.1.0" />
     <PackageReference Include="Microsoft.Playwright.NUnit" Version="1.55.0" />
     <PackageReference Include="NUnit" Version="4.4.0" />
@@ -2641,13 +2644,13 @@ public class LoginSmokeTests : PageTest {
     public async Task Admin_can_log_in_and_sees_navigation() {
         if (!await AppIsUp()) Assert.Ignore("App not running — start it with scripts/run-app.ps1 first.");
         await Page.GotoAsync($"{BaseUrl}/LoginPage", new() { WaitUntil = WaitUntilState.DOMContentLoaded });
-        // XAF Blazor login: first text input = user name, password stays empty for the dev Admin.
-        var userName = Page.Locator("input[type='text']").First;
+        // Task 13 findings: role-based locators (the CSS alternation clicked a non-submitting element),
+        // and XAF captions nav items singular ("Customer", never "Customers").
+        var userName = Page.GetByRole(AriaRole.Textbox, new() { Name = "User Name" });
         await userName.WaitForAsync(new() { Timeout = 15000 });
-        await userName.FillAsync("Admin");
-        await Page.Locator("button[type='submit'], .dxbl-btn-primary button, button:has-text('Log In')").First.ClickAsync();
-        // Landed in the app: navigation shows a domain item.
-        await Expect(Page.Locator("text=Customers").First).ToBeVisibleAsync(new() { Timeout = 20000 });
+        await userName.FillAsync("Admin"); // password stays empty for the dev Admin
+        await Page.GetByRole(AriaRole.Button, new() { Name = "Log In" }).ClickAsync();
+        await Expect(Page.GetByRole(AriaRole.Treeitem, new() { Name = "Customer", Exact = true })).ToBeVisibleAsync(new() { Timeout = 20000 });
         await Page.ScreenshotAsync(new() { Path = "login-smoke.png", FullPage = true });
     }
 }

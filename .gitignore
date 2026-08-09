@@ -127,7 +127,7 @@ ipch/
 *.sap
 
 # Visual Studio Trace Files
-*.e2e
+# *.e2e removed: it swallowed the XafMcp.E2E project directory (case-insensitive match)
 
 # TFS 2012 Local Workspace
 $tf/
@@ -483,3 +483,6 @@ $RECYCLE.BIN/
 
 .app.pid
 XafMcp.Blazor.Server/logs/
+
+# Playwright MCP interactive session artifacts
+.playwright-mcp/
