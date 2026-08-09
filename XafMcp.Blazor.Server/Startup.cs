@@ -71,7 +71,8 @@ public class Startup {
             .WithTools<Mcp.ServerInfoTools>()
             .WithTools<Mcp.DataTools>()
             .WithTools<Mcp.SecurityTools>()
-            .WithTools<Mcp.SchemaTools>();
+            .WithTools<Mcp.SchemaTools>()
+            .WithTools<Mcp.LogTools>();
     }
 
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env) {
