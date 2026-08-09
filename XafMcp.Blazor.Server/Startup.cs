@@ -75,7 +75,7 @@ public class Startup {
             app.UseExceptionHandler("/Error");
             app.UseHsts();
         }
-        // ponytail: no UseHttpsRedirection â€” MCP clients POST to http://localhost:5210/mcp and won't follow a 307
+        // ponytail: no UseHttpsRedirection - MCP clients POST to http://localhost:5210/mcp and won't follow a 307
         app.UseRequestLocalization();
         app.UseStaticFiles();
         app.UseRouting();
