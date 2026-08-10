@@ -2,11 +2,26 @@
   "profiles": {
     "XafMcp.Blazor.Server": {
       "commandName": "Project",
-      "launchBrowser": false,
-      "applicationUrl": "http://localhost:5210",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "http://localhost:5210"
+    },
+    "IIS Express": {
+      "commandName": "IISExpress",
+      "launchBrowser": true,
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
+    }
+  },
+  "iisSettings": {
+    "windowsAuthentication": false,
+    "anonymousAuthentication": true,
+    "iisExpress": {
+      "applicationUrl": "http://localhost:52639/",
+      "sslPort": 44306
     }
   }
 }
