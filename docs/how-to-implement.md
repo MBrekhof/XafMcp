@@ -182,6 +182,11 @@ Reference: `Program.cs` (sink), `XafMcp.Module/Logs/ClefParser.cs`, `LogTools.cs
    page's hidden Enter-key submit button.
 8. **A running app locks build output** — stop the app (`scripts/stop-app.ps1`) before
    `dotnet build`.
+9. **Enum `<>` criteria crash past the parse guard** — `Status <> 'Done'` parses fine, but
+   the EF Core criteria converter only coerces enum↔string for `=`, not `<>`
+   (`Expression.NotEqual` throws `InvalidOperationException` at materialization, observed
+   26.1.4). Guard materialization too, not just `CriteriaOperator.Parse`, and hint the
+   client toward `Not (Status = 'Done')` — an LLM client self-corrects off a good message.
 
 ## Porting checklist
 

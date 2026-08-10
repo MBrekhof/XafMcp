@@ -57,6 +57,20 @@ public class McpHttpSmokeTests {
     }
 
     [Test]
+    public async Task Enum_notequal_criteria_returns_friendly_hint() {
+        await Initialize();
+        var response = await Post(new {
+            jsonrpc = "2.0", id = 2, method = "tools/call",
+            @params = new { name = "query_entities", arguments = new { entity = "ProjectTask", criteria = "Status <> 'Done'" } },
+        });
+        var result = response!.Value.GetProperty("result");
+        Assert.That(result.GetProperty("isError").GetBoolean(), Is.True);
+        var text = result.GetProperty("content").EnumerateArray()
+            .First(c => c.GetProperty("type").GetString() == "text").GetProperty("text").GetString()!;
+        Assert.That(text, Does.Contain("Not (Status = 'Done')"));
+    }
+
+    [Test]
     public async Task Query_returns_rows_and_never_hourly_rate() {
         await Initialize();
         var response = await Post(new {

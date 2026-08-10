@@ -66,11 +66,19 @@ public sealed class DataTools(McpSecurityContext securityContext) {
         }
         using var os = securityContext.CreateObjectSpace(ti.Type);
         var denied = PermissionInspector.GetDeniedReadMembers(os, McpSecurityContext.RoleName, ti.Type);
-        var list = ((DevExpress.ExpressApp.EFCore.EFCoreObjectSpace)os).GetObjects(ti.Type, crit, sorting, false);
-        // ponytail: top is applied after materialization — fine at POC row counts (≤500 orders);
-        // switch to GetObjectsQuery<T> via MakeGenericMethod for server-side Take if datasets grow
-        var rows = list.Cast<object>().Take(top)
-            .Select(o => EntityProjector.Project(o, ti, denied, properties)).ToList();
+        List<Dictionary<string, object?>> rows;
+        try {
+            var list = ((DevExpress.ExpressApp.EFCore.EFCoreObjectSpace)os).GetObjects(ti.Type, crit, sorting, false);
+            // ponytail: top is applied after materialization — fine at POC row counts (≤500 orders);
+            // switch to GetObjectsQuery<T> via MakeGenericMethod for server-side Take if datasets grow
+            rows = list.Cast<object>().Take(top)
+                .Select(o => EntityProjector.Project(o, ti, denied, properties)).ToList();
+        }
+        catch (Exception ex) when (ex is not ModelContextProtocol.McpException) {
+            // Criteria that parse but fail at conversion/materialization (e.g. enum <> 'string') land here.
+            throw new ModelContextProtocol.McpException(
+                $"Query failed: {XafMcp.Module.Services.CriteriaErrorHelper.Describe(ex)}");
+        }
         return System.Text.Json.JsonSerializer.Serialize(new { entity = ti.Type.Name, returned = rows.Count, rows }, JsonOpts.Indented);
     }
 
@@ -99,26 +107,33 @@ public sealed class DataTools(McpSecurityContext securityContext) {
         GuardPathAgainstDeniedMembers(os, ti, group_by);
         if (measure != null) GuardPathAgainstDeniedMembers(os, ti, measure);
 
-        var list = ((DevExpress.ExpressApp.EFCore.EFCoreObjectSpace)os).GetObjects(ti.Type, crit, new List<DevExpress.Xpo.SortProperty>(), false);
-        // ponytail: in-memory grouping — correct and simple at POC scale; move to a LINQ GroupBy over
-        // GetObjectsQuery<T> if row counts grow past a few thousand
-        var groups = list.Cast<object>()
-            .GroupBy(o => XafMcp.Module.Services.PathValueResolver.GetValue(o, group_by)?.ToString() ?? "(null)")
-            .Select(g => new {
-                group = g.Key,
-                count = g.Count(),
-                value = function switch {
-                    "count" => (decimal?)g.Count(),
-                    "sum" => g.Sum(o => ToDecimal(XafMcp.Module.Services.PathValueResolver.GetValue(o, measure!))),
-                    "avg" => g.Average(o => ToDecimal(XafMcp.Module.Services.PathValueResolver.GetValue(o, measure!))),
-                    "min" => g.Min(o => ToDecimal(XafMcp.Module.Services.PathValueResolver.GetValue(o, measure!))),
-                    _ => g.Max(o => ToDecimal(XafMcp.Module.Services.PathValueResolver.GetValue(o, measure!))),
-                },
-            })
-            .OrderByDescending(g => g.value)
-            .Take(500)
-            .ToList();
-        return JsonSerializer.Serialize(new { entity = ti.Type.Name, group_by, function, measure, groups }, JsonOpts.Indented);
+        try {
+            var list = ((DevExpress.ExpressApp.EFCore.EFCoreObjectSpace)os).GetObjects(ti.Type, crit, new List<DevExpress.Xpo.SortProperty>(), false);
+            // ponytail: in-memory grouping — correct and simple at POC scale; move to a LINQ GroupBy over
+            // GetObjectsQuery<T> if row counts grow past a few thousand
+            var groups = list.Cast<object>()
+                .GroupBy(o => XafMcp.Module.Services.PathValueResolver.GetValue(o, group_by)?.ToString() ?? "(null)")
+                .Select(g => new {
+                    group = g.Key,
+                    count = g.Count(),
+                    value = function switch {
+                        "count" => (decimal?)g.Count(),
+                        "sum" => g.Sum(o => ToDecimal(XafMcp.Module.Services.PathValueResolver.GetValue(o, measure!))),
+                        "avg" => g.Average(o => ToDecimal(XafMcp.Module.Services.PathValueResolver.GetValue(o, measure!))),
+                        "min" => g.Min(o => ToDecimal(XafMcp.Module.Services.PathValueResolver.GetValue(o, measure!))),
+                        _ => g.Max(o => ToDecimal(XafMcp.Module.Services.PathValueResolver.GetValue(o, measure!))),
+                    },
+                })
+                .OrderByDescending(g => g.value)
+                .Take(500)
+                .ToList();
+            return JsonSerializer.Serialize(new { entity = ti.Type.Name, group_by, function, measure, groups }, JsonOpts.Indented);
+        }
+        catch (Exception ex) when (ex is not ModelContextProtocol.McpException) {
+            // Criteria that parse but fail at conversion/materialization (e.g. enum <> 'string') land here.
+            throw new ModelContextProtocol.McpException(
+                $"Aggregate failed: {XafMcp.Module.Services.CriteriaErrorHelper.Describe(ex)}");
+        }
     }
 
     static decimal ToDecimal(object? value) => value is null ? 0m : Convert.ToDecimal(value);
